@@ -1,0 +1,342 @@
+﻿<html>
+	<head>
+		<title>CM20219 – Coursework 2 – WebGL</title>
+        <meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body { margin: 0; overflow: hidden; }
+			canvas { width: 100%; height: 100%; }
+		</style>
+	</head>
+	<body>
+		<script src="three.js"></script>
+        <script src = "OBJLoader.js"></script>
+		<script>
+            "use strict"; 
+
+            //file:///C:/Users/latma/OneDrive/Documents/ComputerScience_Yr2/FundamentalsOf_Visual/Coursework2/VisualStudio_Project/Coursework2/WebGL_coursework10.html
+            // Global variables that are available in all functions.
+            var camera, scene, renderer, mesh;
+            var cube, cubeSize, vertex, WireFrame_line;
+            var xline, yline, zline;
+            var rotatex, rotatey, rotatez;
+            var B_rotatex, B_rotatey, B_rotatez;
+            var bunny, bunny_vertex, bunny_WireFrame_line;
+            var up, down, left, right, stop;
+            var counter = 0, counterY = 0;
+
+            // Initialise the scene
+            init();
+			animate();           
+
+            // Listen for keyboard events, to react to them.
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('wheel', zoom);
+
+            // Scene initialisation. This function is only run once, at the very beginning.
+            function init()
+            {
+                scene = new THREE.Scene();
+                scene.add(new THREE.GridHelper(10, 20, 0xffffff));
+
+                up = false; down = false;   left = false; right = false;      
+                rotatex = false; rotatey = false; rotatez = false; 
+                B_rotatex = false; B_rotatey = false; B_rotatez = false;   
+
+                //-----------------------------CAMERA-------------------------------               
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 0, 10);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+                
+                //------------------------------ADDING THE BUNNY---------------------------------                
+                var objloader = new THREE.OBJLoader();
+                objloader.load('bunny-5000.obj', bunnyLoader);
+
+
+              //-------------------------------TEXTURES & MAKING THE CUBE---------------------------------------               
+               var loader = new THREE.TextureLoader();
+               var material = 
+               [
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego1.jpg')}),
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego2.jpg')}),
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego3.jpg')}),
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego4.jpg')}),
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego5.jpg')}),
+                    new THREE.MeshPhongMaterial({map: loader.load ('lego6.jpg')})
+
+               ]
+
+               cubeSize = 2;
+               var cube_geometry = new THREE.BoxGeometry(cubeSize,cubeSize,cubeSize);
+               cube = new THREE.Mesh(cube_geometry, material); 
+               scene.add(cube);
+               cube.material.visible = true;
+              
+
+                //-------------------- CUBE VERTICIES & WIRE FRAME--------------------                            
+                var vertex_material = new THREE.PointsMaterial( { color: 0x0000ff, size:0.2 } );                
+                vertex = new THREE.Points(cube_geometry,vertex_material);
+                
+                var red_line_material_1 = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+                var wireFrame = new THREE.WireframeGeometry(cube_geometry);
+                WireFrame_line = new THREE.LineSegments(wireFrame, red_line_material_1);
+                
+                cube.add(vertex);
+                cube.add(WireFrame_line);
+                
+                vertex.visible = true;
+                WireFrame_line.visible = true;
+
+                
+                //-----------------------VISUALIZE AXIS---------------------------
+                var blue_line_material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+                var green_line_material = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
+                var red_line_material_2 = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+
+                var x_point = [];
+                var y_point = [];
+                var z_point = [];
+
+                x_point.push( new THREE.Vector3(-5, 0, 0 ) );
+                x_point.push( new THREE.Vector3( 5, 0, 0 ) );
+                y_point.push( new THREE.Vector3( 0,-5, 0 ) );
+                y_point.push( new THREE.Vector3( 0, 5, 0 ) );
+                z_point.push( new THREE.Vector3( 0, 0,-5 ) );
+                z_point.push( new THREE.Vector3( 0, 0, 5 ) );
+
+                var xline_geometry = new THREE.BufferGeometry().setFromPoints( x_point );
+                var xline = new THREE.Line( xline_geometry, red_line_material_2 );
+                var yline_geometry = new THREE.BufferGeometry().setFromPoints( y_point );
+                var yline = new THREE.Line( yline_geometry, green_line_material );
+                var zline_geometry = new THREE.BufferGeometry().setFromPoints( z_point );
+                var zline = new THREE.Line( zline_geometry, blue_line_material );
+
+                scene.add( xline );
+                scene.add( yline );
+                scene.add( zline );
+
+                //---------------------------RENDERING-------------------------------------------
+                scene.add(new THREE.AmbientLight(0xffffff));
+
+                // Set up the Web GL renderer.
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio); // HiDPI/retina rendering
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
+
+                // Handle resizing of the browser window.
+				window.addEventListener('resize', handleResize, false);
+
+                //allows you to see the shape of the bunny model
+                var light = new THREE.DirectionalLight( 0xffffff );
+                light.position.set( 0, 1, 1 ).normalize();
+                scene.add(light);                 
+            }
+
+            function handleResize()
+            {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+            function bunnyLoader(BunnyObject){
+                var phong = new THREE.MeshPhongMaterial( { color: 0x6a5acd, specular: 0x555555, shininess: 30 } );
+
+                    BunnyObject.traverse(function (obj){
+                        //if(obj.isMesh){
+                        if(obj instanceof THREE.Mesh){
+                            obj.material = phong;
+                            bunny = obj;
+						}
+					})
+
+                var bunny_geometry = bunny.geometry;
+
+                var bunny_vertex_material = new THREE.PointsMaterial( { color: 0x0000ff, size:0.1 } );                
+                bunny_vertex = new THREE.Points(bunny_geometry,bunny_vertex_material);
+
+                var bunny_line_material = new THREE.MeshBasicMaterial({color: 'magenta', wireframe: true});
+                var bunny_wireFrame = new THREE.WireframeGeometry(bunny_geometry);
+                bunny_WireFrame_line = new THREE.LineSegments(bunny_wireFrame, bunny_line_material);
+                bunny_WireFrame_line.visible = true;
+  
+                bunny.add(bunny_vertex);
+                bunny.add(bunny_WireFrame_line);
+                bunny.position.x = -5;
+                scene.add(bunny);
+			}
+
+            function cameraOrbit(counter, axis, point){
+                var x, y, z;
+                x = point[0]; y = point[1]; z = point[2]; 
+                
+                var translation = new THREE.Matrix4().makeTranslation(x, y, z);
+                var backwardsTransl = new THREE.Matrix4().makeTranslation(-x, -y, -z);
+                
+                if(axis == "x"){
+                    var rotation = new THREE.Matrix4().makeRotationX(counter * Math.PI); 
+				}
+                else if(axis == "y"){
+                    var rotation = new THREE.Matrix4().makeRotationY(counter * Math.PI); 
+				}
+                    
+                var transformation = rotation.multiply(backwardsTransl);
+                var orbit = translation.multiply(transformation); // = T*R*Tn
+                var cameraMatrix = new THREE.Matrix4();
+                cameraMatrix = camera.matrix;
+                var resultMatrix = orbit.multiply(cameraMatrix);
+
+                var arrResults = resultMatrix.elements;   
+                if(axis == "x"){camera.translateY(arrResults[5]);}
+                else if(axis == "y"){camera.translateX(arrResults[0]);};                        
+                camera.lookAt(x, y, z);               
+			}
+
+            function bunnyScale(originalBunPos){
+                var box = new THREE.Box3().setFromObject( bunny );
+                var dimensions = new THREE.Vector3();
+                box.getSize(dimensions);
+                var scaleVal = Math.max(dimensions.x, dimensions.y, dimensions.z);
+                var x = cubeSize/scaleVal;
+
+                bunny.geometry.center();
+                bunny_WireFrame_line.geometry.center();
+                bunny.position.x = 0;
+                bunny.position.y = 0;
+                bunny.position.z = 0;
+
+                bunny.scale.set(x,x,x);                
+			}
+
+	    function animate()
+            {
+                requestAnimationFrame(animate);
+
+                if(rotatex == true){
+                    cube.rotateOnAxis(new THREE.Vector3(1,0,0), 0.01);
+				}if(rotatey == true){
+                    cube.rotateOnAxis(new THREE.Vector3(0,1,0), 0.01);
+				}if(rotatez == true){
+                    cube.rotateOnAxis(new THREE.Vector3(0,0,1), 0.01);
+				}
+
+                if(B_rotatex == true){
+                    bunny.rotateOnAxis(new THREE.Vector3(1,0,0), 0.01);
+				}if(B_rotatey == true){
+                    bunny.rotateOnAxis(new THREE.Vector3(0,1,0), 0.01);
+				}if(B_rotatez == true){
+                    bunny.rotateOnAxis(new THREE.Vector3(0,0,1), 0.01);
+				}
+
+                if(up == true){
+                    camera.translateY(0.01);
+				}
+                if(down == true){
+                  camera.translateY(-0.010);
+				}
+                if(left == true){
+                  camera.translateX(-0.01);
+				}
+                if(right == true){
+                  camera.translateX(0.01);
+				}
+                if(stop == true){
+                    up = false; down = false; left = false; right = false; stop = false;
+                    rotatex = false; rotatey = false; rotatez = false; 
+                    B_rotatex = false; B_rotatey = false; B_rotatez = false;
+                }
+
+				renderer.render(scene, camera); 
+			}
+
+            // Handle keyboard presses.
+            function handleKeyDown(event)
+            {
+                switch (event.keyCode)
+                {
+                    //-----------------------RENDER MODES-----------------------------
+                    case 70: // f = face
+                        if(cube.material.visible == true){
+                            for(var i = 0; i<6; i++){cube.material[i].visible = false;}                        
+                            cube.material.visible = false;
+                        }
+                        else{                            
+                            for(var i = 0; i<6; i++){cube.material[i].visible = true;}
+                            cube.material.visible = true;
+                        }   
+                        bunny.material.visible =! bunny.material.visible; 
+                        break;
+
+                    case 69: // e = edge/wire frame
+                        WireFrame_line.visible =! WireFrame_line.visible;
+                        bunny_WireFrame_line.visible =! bunny_WireFrame_line.visible;                    
+                        break;
+
+                    case 86: // v = vertex   
+                        vertex.visible =! vertex.visible ;
+                        bunny_vertex.visible =! bunny_vertex.visible;
+                        break;
+
+                    //------------------------OBJECT ROTATION------------------------
+                    case 88: //rotate around x axis
+                        rotatex =! rotatex;
+                        B_rotatex =! B_rotatex;
+                        break;
+                    case 89: //rotate around y axis
+                        rotatey =! rotatey;
+                        B_rotatey =! B_rotatey;
+                        break;
+                    case 90: //rotate around z axis
+                        rotatez =! rotatez;
+                        B_rotatez =! B_rotatez;
+                        break;
+                    
+                    //------------------------ORBIT FUNCTIONS----------------------- 
+                    case 82: // r = orbit vertically
+                        if(counter< 2){counter += 0.01;}
+                        else{counter = 0;}
+                        cameraOrbit(counter,"x",[0,0,0]);
+                        break;
+
+                    case 84: // t = orbit about yplane
+                        if(counterY< 2){counterY += 0.01;}
+                            else{counterY = 0;}
+                            cameraOrbit(counterY,"y",[0,0,0]);
+                        break;
+
+                    //----------------------CAMERA MOVEMENT---------------------------
+                    case 38:
+                        if(up == false){up = true; down = false;}
+                        else{up = false;}
+                        break;
+                    case 40:
+                        if(down == false){down = true; up = false;}
+                        else{down = false;}
+                        break;
+                    case 37:
+                        if(left == false){left = true; right = false;}
+                        else{left = false;}
+                        break;
+                    case 39:
+                    if(right == false){right = true; left = false;}
+                        else{right = false;}
+                        break;
+                    case 32:
+                        stop = true;
+                    break;
+
+                    case 66:
+                        bunnyScale([-5,0,0]);                    
+                    break;
+                }
+            }
+
+            function zoom(event){
+                    if(event.deltaY < 0){
+                        camera.translateZ(-0.4);
+					}else{camera.translateZ(0.4);}
+            }
+		</script>
+	</body>
+</html>
